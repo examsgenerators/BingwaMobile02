@@ -186,14 +186,18 @@ fun OffersScreen() {
         }
     }
     if (showDialog) {
-        AddOfferDialog(editOffer) { offer ->
-            offers = offers.toMutableList().also { list ->
-                val idx = list.indexOfFirst { it.name == offer.name }
-                if (idx >= 0) list[idx] = offer else list.add(offer)
-            }
-            prefs.edit().putString("offers", gson.toJson(offers)).apply()
-            showDialog = false
-        } onDismiss = { showDialog = false }
+        AddOfferDialog(
+            existing = editOffer,
+            onSave = { offer ->
+                offers = offers.toMutableList().also { list ->
+                    val idx = list.indexOfFirst { it.name == offer.name }
+                    if (idx >= 0) list[idx] = offer else list.add(offer)
+                }
+                prefs.edit().putString("offers", gson.toJson(offers)).apply()
+                showDialog = false
+            },
+            onDismiss = { showDialog = false }
+        )
     }
 }
 
