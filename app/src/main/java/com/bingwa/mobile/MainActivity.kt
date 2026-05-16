@@ -122,8 +122,8 @@ fun DashboardScreen(bal: Int, air: String) {
         LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
             item { Text("How It Works", fontSize = 20.sp, fontWeight = FontWeight.Bold) }
             item { InfoCard(Icons.Default.Add, "Buy Tokens", "Send money to VICTOR NGETICH via M-PESA.\nKSh 10 = 90 tokens | KSh 50 = 500 tokens | KSh 100 = 1000 tokens", Color(0xFF1A73E8)) }
-            item { InfoCard(Icons.Default.ShoppingCart, "Sell Data", "Client sends money to YOUR M-PESA.\nApp deducts tokens and dials USSD automatically.", Color(0xFF34A853)) }
-            item { InfoCard(Icons.Default.Refresh, "Airtime Balance", "Checks *144# every 4 seconds.\nShows real-time balance on dashboard.", Color(0xFFFF9800)) }
+            item { InfoCard(Icons.Default.ShoppingCart, "Sell Data", "Client sends money to YOUR M-PESA.\nApp deducts 1 token and dials USSD automatically.", Color(0xFF34A853)) }
+            item { InfoCard(Icons.Default.Refresh, "Airtime Balance", "Checks *144# every 4 seconds in background.\nNo popups. Shows real-time balance on dashboard.", Color(0xFFFF9800)) }
         }
     }
 }
@@ -148,7 +148,7 @@ fun OffersScreen() {
         mutableStateOf(try {
             gson.fromJson<List<DataOffer>>(prefs.getString("offers", "[]")!!, object : TypeToken<List<DataOffer>>() {}.type)
         } catch (_: Exception) {
-            listOf(DataOffer("250MB Daily", 20, 1, "*180*5*2*1#", "ADVANCED", "daily"), DataOffer("1GB Weekly", 50, 1, "*180*5*2*2#", "ADVANCED", "weekly"))
+            listOf(DataOffer("250MB Daily", 20, "*180*5*2*1#", "ADVANCED", "daily"), DataOffer("1GB Weekly", 50, "*180*5*2*2#", "ADVANCED", "weekly"))
         })
     }
     var showDialog by remember { mutableStateOf(false) }
@@ -170,7 +170,7 @@ fun OffersScreen() {
                         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
                             Column(Modifier.weight(1f)) {
                                 Text(offer.name, fontSize = 18.sp, fontWeight = FontWeight.Bold)
-                                Text("USSD: ${offer.ussdCode}  |  KSh ${offer.price}  |  Tokens: ${offer.tokenCost}  |  ${offer.mode}", fontSize = 13.sp, color = Color.Gray)
+                                Text("USSD: ${offer.ussdCode}  |  KSh ${offer.price}  |  ${offer.executionMode}  |  ${offer.mode}", fontSize = 13.sp, color = Color.Gray)
                             }
                             Row {
                                 IconButton(onClick = { editOffer = offer; showDialog = true }) { Icon(Icons.Default.Edit, "Edit", tint = Color(0xFF1A73E8)) }
@@ -205,18 +205,24 @@ fun OffersScreen() {
 fun AddOfferDialog(existing: DataOffer?, onSave: (DataOffer) -> Unit, onDismiss: () -> Unit) {
     var name by remember { mutableStateOf(existing?.name ?: "") }
     var price by remember { mutableStateOf(existing?.price?.toString() ?: "") }
-    var tokens by remember { mutableStateOf(existing?.tokenCost?.toString() ?: "1") }
     var code by remember { mutableStateOf(existing?.ussdCode ?: "") }
+    var execMode by remember { mutableStateOf(existing?.executionMode ?: "SIMPLE") }
     var mode by remember { mutableStateOf(existing?.mode ?: "daily") }
 
     AlertDialog(onDismissRequest = onDismiss, title = { Text(if (existing != null) "Edit Offer" else "Add Offer") }, text = {
         Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
             OutlinedTextField(value = name, onValueChange = { name = it }, label = { Text("Name") })
             OutlinedTextField(value = price, onValueChange = { price = it }, label = { Text("Price (KSh)") }, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number))
-            OutlinedTextField(value = tokens, onValueChange = { tokens = it }, label = { Text("Token cost") }, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number))
             OutlinedTextField(value = code, onValueChange = { code = it }, label = { Text("USSD code") })
             Row(verticalAlignment = Alignment.CenterVertically) {
-                Text("Mode: "); listOf("daily", "weekly", "monthly").forEach {
+                Text("Execution: ")
+                FilterChip(selected = execMode == "SIMPLE", onClick = { execMode = "SIMPLE" }, label = { Text("SIMPLE") })
+                Spacer(Modifier.width(4.dp))
+                FilterChip(selected = execMode == "ADVANCED", onClick = { execMode = "ADVANCED" }, label = { Text("ADVANCED") })
+            }
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text("Mode: ")
+                listOf("daily", "weekly", "monthly").forEach {
                     FilterChip(selected = mode == it, onClick = { mode = it }, label = { Text(it) })
                     Spacer(Modifier.width(4.dp))
                 }
@@ -224,8 +230,8 @@ fun AddOfferDialog(existing: DataOffer?, onSave: (DataOffer) -> Unit, onDismiss:
         }
     }, confirmButton = {
         Button(onClick = {
-            val p = price.toIntOrNull() ?: 0; val t = tokens.toIntOrNull() ?: 1
-            if (p > 0 && code.isNotBlank()) onSave(DataOffer(name.ifBlank { "New" }, p, t, code, existing?.executionMode ?: "SIMPLE", mode))
+            val p = price.toIntOrNull() ?: 0
+            if (p > 0 && code.isNotBlank()) onSave(DataOffer(name.ifBlank { "New" }, p, code, execMode, mode))
         }) { Text("Save") }
     }, dismissButton = { TextButton(onClick = onDismiss) { Text("Cancel") } })
 }
